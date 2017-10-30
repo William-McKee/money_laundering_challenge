@@ -60,28 +60,31 @@ def get_suspicious_transactions(trans_dict):
     # Loop through dictionary
     for key1, value_list1 in trans_dict.items():
         
-        # This row's items
-        amount1 = value_list1[AMOUNT_INDEX]
-        sender1 = value_list1[SENDER_INDEX]
-        receiver1 = value_list1[RECEIVER_INDEX]
-        
         # Loop through the other items
         for key2, value_list2 in trans_dict.items():
             
             # Don't check against itself
             if (key1 == key2):
                 continue
-        
-            # Other row's items
-            amount2 = value_list2[AMOUNT_INDEX]
-            sender2 = value_list2[SENDER_INDEX]
-            receiver2 = value_list2[RECEIVER_INDEX]
             
-            # Compare the transactions
-            if (receiver1 == sender2 and receiver2 != sender1 and 
-                amount2 >= AMOUNT_THRESHOLD*amount1 and amount2 <= amount1):
-                suspects.add(key1)
-                suspects.add(key2)
+            # Check entity IDs
+            receiver1 = value_list1[RECEIVER_INDEX]
+            sender2 = value_list2[SENDER_INDEX]
+            if (receiver1 == sender2):
+                
+                # Original receiver not getting money back
+                sender1 = value_list1[SENDER_INDEX]
+                receiver2 = value_list2[RECEIVER_INDEX]
+                if (receiver2 != sender1):
+                    
+                    # Check the amount exchanged
+                    amount1 = value_list1[AMOUNT_INDEX]
+                    amount2 = value_list2[AMOUNT_INDEX]
+                    if (amount2 >= AMOUNT_THRESHOLD*amount1 and amount2 <= amount1):
+                        
+                        # Suspicious transaction
+                        suspects.add(key1)
+                        suspects.add(key2)
 
     return suspects
 
