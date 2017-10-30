@@ -10,24 +10,6 @@ from datetime import datetime
 import pandas as pd
 import re
 
-print("Start Program: ", datetime.now())
-
-# Read the transactions file
-trans_df = pd.read_csv('transactions.csv')
-
-# Data set basic properties
-print("Data dimensions: ")
-print(trans_df.shape)
-print("\n")
-
-print("Column values:")
-print(trans_df.columns.values)
-print("\n")
-
-# Save column name
-col_name = trans_df.columns.values[0]
-
-# Replace single column item with multiple columns
 def does_item_match_pattern(parts):
     '''Checks to see if a row item matches expected regex pattern'''
     if (len(parts) != 5):
@@ -61,31 +43,6 @@ def parse_row(item):
             item_to_return.append('0')
             
     return item_to_return
-
-trans_df['Transaction'], trans_df['TimeStamp'], trans_df['Amount'], trans_df['Sender'], trans_df['Receiver'] = \
-    zip(*trans_df[col_name].map(parse_row))
-trans_df = trans_df.drop(col_name, axis=1)
-
-# Drop rows with invalid information
-trans_df = trans_df[trans_df.Transaction != '0']
-
-# Convert column types
-trans_df.Amount = trans_df.Amount.astype(float)
-
-# Indexing
-trans_df.set_index(('Transaction'), inplace=True)
-
-# Sort by Date
-trans_df.sort_values(['TimeStamp'], inplace=True)
-
-# Data set basic properties
-print("Data dimensions: ")
-print(trans_df.shape)
-print("\n")
-
-print("Column values:")
-print(trans_df.columns.values)
-print("\n")
 
 AMOUNT_INDEX = 1
 SENDER_INDEX = 2
@@ -124,9 +81,53 @@ def get_suspicious_transactions(trans_dict):
             if (receiver1 == sender2 and receiver2 != sender1 and 
                 amount2 >= AMOUNT_THRESHOLD*amount1 and amount2 <= amount1):
                 suspects.add(key1)
-                suspects.add(key2)    
+                suspects.add(key2)
 
     return suspects
+
+
+print("Start Program: ", datetime.now())
+
+# Read the transactions file
+trans_df = pd.read_csv('transactions.csv')
+
+# Data set basic properties
+print("Data dimensions: ")
+print(trans_df.shape)
+print("\n")
+
+print("Column values:")
+print(trans_df.columns.values)
+print("\n")
+
+# Save column name
+col_name = trans_df.columns.values[0]
+
+# Replace single column item with multiple columns
+trans_df['Transaction'], trans_df['TimeStamp'], trans_df['Amount'], trans_df['Sender'], trans_df['Receiver'] = \
+    zip(*trans_df[col_name].map(parse_row))
+trans_df = trans_df.drop(col_name, axis=1)
+
+# Drop rows with invalid information
+trans_df = trans_df[trans_df.Transaction != '0']
+
+# Convert column types
+trans_df.Amount = trans_df.Amount.astype(float)
+
+# Indexing
+trans_df.set_index(('Transaction'), inplace=True)
+
+# Sort by Date
+trans_df.sort_values(['TimeStamp'], inplace=True)
+
+# Data set basic properties
+print("Data dimensions: ")
+print(trans_df.shape)
+print("\n")
+
+print("Column values:")
+print(trans_df.columns.values)
+print("\n")
 
 # Check for suspicious transactions
 print("Start Dict Processing: ", datetime.now())
