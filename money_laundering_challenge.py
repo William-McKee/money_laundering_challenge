@@ -10,6 +10,11 @@ from datetime import datetime
 import pandas as pd
 import re
 
+GUID_REGEX = b'[0-9a-f]{64}'
+DATE_REGEX = b'[0-9]{4}-[0-9]{2}-[0-9]{2}'
+AMOUNT_REGEX = b'[0-9]+\.[0-9]{2}'
+ENTITY_REGEX = b'ID[0-9]{14}'
+
 def does_item_match_pattern(parts):
     '''Checks to see if a row item matches expected regex pattern'''
     if (len(parts) != 5):
@@ -22,11 +27,11 @@ def does_item_match_pattern(parts):
     sender = parts[3].strip()
     receiver = parts[4].strip()
     
-    return(re.match(b'[0-9a-f]{64}', str.encode(guid)) and \
-           re.match(b'[0-9]{4}-[0-9]{2}-[0-9]{2}', str.encode(date)) and \
-           re.match(b'[0-9]+\.[0-9]{2}', str.encode(amount)) and \
-           re.match(b'ID[0-9]{14}', str.encode(sender)) and \
-           re.match(b'ID[0-9]{14}', str.encode(receiver)) and \
+    return(re.match(GUID_REGEX, str.encode(guid)) and \
+           re.match(DATE_REGEX, str.encode(date)) and \
+           re.match(AMOUNT_REGEX, str.encode(amount)) and \
+           re.match(ENTITY_REGEX, str.encode(sender)) and \
+           re.match(ENTITY_REGEX, str.encode(receiver)) and \
            sender != receiver)
     
 def parse_row(item):
@@ -137,7 +142,7 @@ print("Start Dict Processing: ", datetime.now())
 keys_set = set()
 trans_groups = trans_df.groupby('TimeStamp')
 for name, group in trans_groups:
-    trans_dict = group.T.to_dict('list')
+    trans_dict = group.T.apply(tuple).to_dict()
     keys_set |= get_suspicious_transactions(trans_dict)
 print("End Dict Processing: ", datetime.now())
 
