@@ -213,3 +213,9 @@ trans_df_counts.drop(['Sender', 'Receiver'], axis=1, inplace=True)
 trans_df_counts.sort_values(['Total'], inplace=True, ascending=False)
 
 trans_df_counts.to_csv('suspicious_entities.csv', columns=trans_df_counts.columns.values)
+
+# Remove temporary csv files
+import os
+for file in temp_file_names:
+    if os.path.exists(file):
+        os.remove(file)
