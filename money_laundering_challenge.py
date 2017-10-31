@@ -9,11 +9,21 @@ November 2017
 from datetime import datetime
 import pandas as pd
 import re
+import math
+from dateutil.parser import parse
 
 GUID_REGEX = b'[0-9a-f]{64}'
 DATE_REGEX = b'[0-9]{4}-[0-9]{2}-[0-9]{2}'
 AMOUNT_REGEX = b'[0-9]+\.[0-9]{2}'
 ENTITY_REGEX = b'ID[0-9]{14}'
+
+def is_date(date_string):
+    '''Is the string a proper date?'''
+    try:
+        parse(date_string)
+    except ValueError:
+        return False
+    return True
 
 def does_item_match_pattern(parts):
     '''Checks to see if a row item matches expected regex pattern'''
@@ -28,7 +38,7 @@ def does_item_match_pattern(parts):
     receiver = parts[4].strip()
     
     return(re.match(GUID_REGEX, str.encode(guid)) and \
-           re.match(DATE_REGEX, str.encode(date)) and \
+           is_date(date) and \
            re.match(AMOUNT_REGEX, str.encode(amount)) and \
            re.match(ENTITY_REGEX, str.encode(sender)) and \
            re.match(ENTITY_REGEX, str.encode(receiver)) and \
@@ -93,7 +103,6 @@ def get_suspicious_transactions(trans_dict):
 
     return suspects
 
-
 print("Start Program: ", datetime.now())
 
 # Read the transactions file
@@ -137,24 +146,61 @@ print("Column values:")
 print(trans_df.columns.values)
 print("\n")
 
-# Check for suspicious transactions
-print("Start Dict Processing: ", datetime.now())
-keys_set = set()
+# Split large data frame into parts
+new_df = pd.DataFrame()
 trans_groups = trans_df.groupby('TimeStamp')
+COUNTER_START_VALUE = 50
+number_of_files = math.ceil(len(trans_groups) / COUNTER_START_VALUE)
+temp_file_names = []
+counter = COUNTER_START_VALUE
+file_number = 0
+
+# Write data frame parts to temproary files
 for name, group in trans_groups:
-    trans_dict = group.T.apply(tuple).to_dict()
-    keys_set |= get_suspicious_transactions(trans_dict)
+    new_df = new_df.append(group)
+    if (counter > 0):
+        counter -= 1
+    else:
+        file_name = 't' + str(file_number) + '.csv'
+        new_df.to_csv(file_name, columns=trans_df.columns.values)
+        new_df = pd.DataFrame()
+        temp_file_names.append(file_name)
+        counter = COUNTER_START_VALUE
+        file_number += 1
+        
+file_name = 't' + str(file_number) + '.csv'
+new_df.to_csv(file_name, columns=trans_df.columns.values)
+temp_file_names.append(file_name)
+        
+print("End DataFrame Processing: ", datetime.now())
+
+# Loop through the temporary files
+keys_set = set()
+suspect_trans_df = pd.DataFrame(columns=['Transaction', 'TimeStamp', 'Amount', 'Sender', 'Receiver'])
+suspect_trans_df.set_index(('Transaction'), inplace=True)
+print("Start Dict Processing: ", datetime.now())
+for file in temp_file_names:
+    print("File ", file)
+    trans_df = pd.read_csv(file)
+    trans_df.set_index(('Transaction'), inplace=True)
+    trans_groups = trans_df.groupby('TimeStamp')
+
+    # Check this dataframe for suspicious transactions
+    for name, group in trans_groups:
+        trans_dict = group.T.apply(tuple).to_dict()
+        keys_set |= get_suspicious_transactions(trans_dict)
+    
+    # Select only suspicious transactions
+    suspect_trans_df = suspect_trans_df.append(trans_df.loc[trans_df.index.isin(keys_set)])
+    
 print("End Dict Processing: ", datetime.now())
 
-# Select only suspicious transactions
-trans_df = trans_df.loc[trans_df.index.isin(keys_set)]
-
 # Suspicoius transactions output file
-header = trans_df.columns.values
-trans_df.to_csv('suspicious_transactions.csv', columns=header)
+suspect_trans_df.to_csv('suspicious_transactions.csv', index=['Transaction'],
+                        columns=['TimeStamp', 'Amount', 'Sender', 'Receiver'])
 
 # Get counts of IDs and write that to output file
-trans_df_counts = trans_df[['Sender', 'Receiver']].apply(pd.Series.value_counts)
+trans_df_counts = suspect_trans_df[['Sender', 'Receiver']].apply(pd.Series.value_counts)
 trans_df_counts.fillna(0, inplace=True)
 trans_df_counts['Total'] = trans_df_counts['Sender'] + trans_df_counts['Receiver']
 
@@ -166,5 +212,4 @@ trans_df_counts.index.names = ['Entity']
 trans_df_counts.drop(['Sender', 'Receiver'], axis=1, inplace=True)
 trans_df_counts.sort_values(['Total'], inplace=True, ascending=False)
 
-header = trans_df_counts.columns.values
-trans_df_counts.to_csv('suspicious_entities.csv', columns=header)
+trans_df_counts.to_csv('suspicious_entities.csv', columns=trans_df_counts.columns.values)
