@@ -174,23 +174,66 @@ temp_file_names.append(file_name)
         
 print("End DataFrame Processing: ", datetime.now())
 
-# Loop through the temporary files
+# Use multi-threading to determine suspicious transactions
+import threading
+import multiprocessing as mp
+
+class moneyLaunderingDetectionThread(threading.Thread):
+    
+    def __init__(self, trans_df, output):
+        '''
+        Initialize money laundering thread
+        trans_df = Data Frame for one csv file
+        output = Queue containing the money landering function output
+        '''
+        threading.Thread.__init__(self)
+        self.our_df = trans_df
+        self.our_output = output
+        
+    def run(self):
+        '''
+        Run the money laundering detection function and places result in the queue
+        '''
+        self.our_df.set_index(('Transaction'), inplace=True)
+        self.our_groups = self.our_df.groupby('TimeStamp')
+        
+        # Check this dataframe for suspicious transactions
+        keys_set = set()
+        for name, group in self.our_groups:
+            self.our_dict = group.T.apply(tuple).to_dict()
+            keys_set |= get_suspicious_transactions(self.our_dict)
+        self.our_output.put(keys_set)
+
+# TODO: Run on all temporary csv files
+temp_file_names_1 = ['t0.csv', 't1.csv']
+
+# Define an output queue and process list
+output = mp.Queue()
+processes = []
+
+print("Start Dict Processing: ", datetime.now())
+
+# Loop through temporary files
+for file in temp_file_names_1:
+    trans_df = pd.read_csv(file)
+    thread = moneyLaunderingDetectionThread(trans_df, output)
+    processes.append(thread)
+        
+# Start the processes
+for p in processes:
+    p.start()
+
+# Exit the completed processes
+for p in processes:
+    p.join()
+
+# Select only suspicious transations
 keys_set = set()
 suspect_trans_df = pd.DataFrame(columns=['Transaction', 'TimeStamp', 'Amount', 'Sender', 'Receiver'])
 suspect_trans_df.set_index(('Transaction'), inplace=True)
-print("Start Dict Processing: ", datetime.now())
-for file in temp_file_names:
-    print("File ", file)
-    trans_df = pd.read_csv(file)
-    trans_df.set_index(('Transaction'), inplace=True)
-    trans_groups = trans_df.groupby('TimeStamp')
-
-    # Check this dataframe for suspicious transactions
-    for name, group in trans_groups:
-        trans_dict = group.T.apply(tuple).to_dict()
-        keys_set |= get_suspicious_transactions(trans_dict)
-    
-    # Select only suspicious transactions
+for i in range(len(processes)):
+    trans_df = processes[i].our_df
+    keys_set = processes[i].our_output.get()
     suspect_trans_df = suspect_trans_df.append(trans_df.loc[trans_df.index.isin(keys_set)])
     
 print("End Dict Processing: ", datetime.now())
