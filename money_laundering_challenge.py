@@ -206,20 +206,20 @@ class moneyLaunderingDetectionThread(threading.Thread):
 
 print("Start Dict Processing: ", datetime.now())
 
-temp_file_names_1 = ['t0.csv', 't1.csv', 't2.csv', 't3.csv']
+#temp_file_names_1 = ['t0.csv', 't1.csv', 't2.csv', 't3.csv']
 suspect_trans_df = pd.DataFrame(columns=['Transaction', 'TimeStamp', 'Amount', 'Sender', 'Receiver'])
 suspect_trans_df.set_index(('Transaction'), inplace=True)
     
 # Loop through temporary files three at a time
-for i in range(0,len(temp_file_names_1),3):
+for i in range(0,len(temp_file_names),3):
     processes = []
     
     # Build files for processing
-    these_files = [temp_file_names_1[i]]
-    if (i+1 < len(temp_file_names_1)):
-        these_files.append(temp_file_names_1[i+1])
-    if (i+2 < len(temp_file_names_1)):
-        these_files.append(temp_file_names_1[i+2])
+    these_files = [temp_file_names[i]]
+    if (i+1 < len(temp_file_names)):
+        these_files.append(temp_file_names[i+1])
+    if (i+2 < len(temp_file_names)):
+        these_files.append(temp_file_names[i+2])
     
     # Set up multi-threaded processing
     print("These Files: ", these_files)
