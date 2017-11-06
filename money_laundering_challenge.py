@@ -204,17 +204,16 @@ class moneyLaunderingDetectionThread(threading.Thread):
             keys_set |= get_suspicious_transactions(self.our_dict)
         self.our_output.put(keys_set)
 
-# TODO: Run on all temporary csv files
-temp_file_names_1 = ['t0.csv', 't1.csv']
-
 # Define an output queue and process list
-output = mp.Queue()
 processes = []
 
 print("Start Dict Processing: ", datetime.now())
 
+temp_file_names_1 = ['t0.csv', 't1.csv', 't2.csv']
+
 # Loop through temporary files
 for file in temp_file_names_1:
+    output = mp.Queue()
     trans_df = pd.read_csv(file)
     thread = moneyLaunderingDetectionThread(trans_df, output)
     processes.append(thread)
@@ -231,9 +230,11 @@ for p in processes:
 keys_set = set()
 suspect_trans_df = pd.DataFrame(columns=['Transaction', 'TimeStamp', 'Amount', 'Sender', 'Receiver'])
 suspect_trans_df.set_index(('Transaction'), inplace=True)
-for i in range(len(processes)):
-    trans_df = processes[i].our_df
-    keys_set = processes[i].our_output.get()
+for p in processes:
+    trans_df = p.our_df
+    keys_set = p.our_output.get()
+    print(keys_set)
+    print("\n")
     suspect_trans_df = suspect_trans_df.append(trans_df.loc[trans_df.index.isin(keys_set)])
     
 print("End Dict Processing: ", datetime.now())
