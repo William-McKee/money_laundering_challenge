@@ -204,38 +204,45 @@ class moneyLaunderingDetectionThread(threading.Thread):
             keys_set |= get_suspicious_transactions(self.our_dict)
         self.our_output.put(keys_set)
 
-# Define an output queue and process list
-processes = []
-
 print("Start Dict Processing: ", datetime.now())
 
-temp_file_names_1 = ['t0.csv', 't1.csv', 't2.csv']
-
-# Loop through temporary files
-for file in temp_file_names_1:
-    output = mp.Queue()
-    trans_df = pd.read_csv(file)
-    thread = moneyLaunderingDetectionThread(trans_df, output)
-    processes.append(thread)
-        
-# Start the processes
-for p in processes:
-    p.start()
-
-# Exit the completed processes
-for p in processes:
-    p.join()
-
-# Select only suspicious transations
-keys_set = set()
+temp_file_names_1 = ['t0.csv', 't1.csv', 't2.csv', 't3.csv']
 suspect_trans_df = pd.DataFrame(columns=['Transaction', 'TimeStamp', 'Amount', 'Sender', 'Receiver'])
 suspect_trans_df.set_index(('Transaction'), inplace=True)
-for p in processes:
-    trans_df = p.our_df
-    keys_set = p.our_output.get()
-    print(keys_set)
-    print("\n")
-    suspect_trans_df = suspect_trans_df.append(trans_df.loc[trans_df.index.isin(keys_set)])
+    
+# Loop through temporary files three at a time
+for i in range(0,len(temp_file_names_1),3):
+    processes = []
+    
+    # Build files for processing
+    these_files = [temp_file_names_1[i]]
+    if (i+1 < len(temp_file_names_1)):
+        these_files.append(temp_file_names_1[i+1])
+    if (i+2 < len(temp_file_names_1)):
+        these_files.append(temp_file_names_1[i+2])
+    
+    # Set up multi-threaded processing
+    print("These Files: ", these_files)
+    for file in these_files:
+        output = mp.Queue()
+        trans_df = pd.read_csv(file)
+        thread = moneyLaunderingDetectionThread(trans_df, output)
+        processes.append(thread)
+        
+    # Start the processes
+    for p in processes:
+        p.start()
+
+    # Exit the completed processes
+    for p in processes:
+        p.join()
+
+    # Select only suspicious transations
+    keys_set = set()
+    for p in processes:
+        trans_df = p.our_df
+        keys_set = p.our_output.get()
+        suspect_trans_df = suspect_trans_df.append(trans_df.loc[trans_df.index.isin(keys_set)])
     
 print("End Dict Processing: ", datetime.now())
 
