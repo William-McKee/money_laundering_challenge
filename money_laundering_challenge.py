@@ -111,11 +111,11 @@ trans_df = pd.read_csv('transactions.csv')
 # Data set basic properties
 print("Data dimensions: ")
 print(trans_df.shape)
-print("\n")
+print()
 
 print("Column values:")
 print(trans_df.columns.values)
-print("\n")
+print()
 
 # Save column name
 col_name = trans_df.columns.values[0]
@@ -140,11 +140,11 @@ trans_df.sort_values(['TimeStamp'], inplace=True)
 # Data set basic properties
 print("Data dimensions: ")
 print(trans_df.shape)
-print("\n")
+print()
 
 print("Column values:")
 print(trans_df.columns.values)
-print("\n")
+print()
 
 # Split large data frame into parts
 new_df = pd.DataFrame()
